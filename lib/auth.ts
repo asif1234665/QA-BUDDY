@@ -10,8 +10,8 @@ export function createToken(user: { id: string; email: string }) {
   );
 }
 
-export function getUserFromCookies() {
-  const cookieStore = cookies();
+export async function getUserFromCookies() {
+  const cookieStore = await cookies();
   const token = cookieStore.get("token")?.value;
 
   if (!token) return null;
@@ -27,7 +27,7 @@ export function getUserFromCookies() {
 }
 
 export async function getCurrentUser() {
-  const userPayload = getUserFromCookies();
+  const userPayload = await getUserFromCookies();
   if (!userPayload) return null;
 
   return await prisma.user.findUnique({ where: { id: userPayload.userId } });
