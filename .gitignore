@@ -1,6 +1,14 @@
-node_modules
-.next
-out
+# dependencies
+/node_modules
+/.next
+/out
 npm-debug.log*
+
+# environment
+.env
 .env.local
-public/uploads
+.env.*.local
+!.env.example
+
+# misc
+.DS_Store
