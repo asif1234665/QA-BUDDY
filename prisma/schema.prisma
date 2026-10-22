@@ -1,0 +1,187 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  admin
+  manager
+  tester
+  developer
+}
+
+model User {
+  id           String   @id @default(uuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  uniqueKey    String   @unique
+  role         Role     @default(tester)
+  createdAt    DateTime @default(now())
+
+  projects         Project[]
+  plans            TestPlan[]
+  scenarios        TestScenario[]
+  cases            TestCase[]
+  bugs             BugReport[]
+  reports          ExecutionReport[]
+  uploadedBugFiles BugFile[]
+}
+
+model Project {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  ownerId     String
+  status      String   @default("active")
+  createdAt   DateTime @default(now())
+
+  owner     User          @relation(fields: [ownerId], references: [id])
+  phases    Phase[]
+  plans     TestPlan[]
+  scenarios TestScenario[]
+  cases     TestCase[]
+  bugs      BugReport[]
+  reports   ExecutionReport[]
+}
+
+model Phase {
+  id          String   @id @default(uuid())
+  projectId   String
+  name        String
+  description String?
+  status      String   @default("planned")
+  createdAt   DateTime @default(now())
+
+  project   Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  plans     TestPlan[]
+  scenarios TestScenario[]
+  cases     TestCase[]
+  bugs      BugReport[]
+  reports   ExecutionReport[]
+}
+
+model TestPlan {
+  id          String   @id @default(uuid())
+  projectId   String
+  phaseId     String
+  title       String
+  objective   String?
+  scope       String?
+  environment String?
+  createdById String
+  createdAt   DateTime @default(now())
+
+  project   Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  phase     Phase         @relation(fields: [phaseId], references: [id], onDelete: Cascade)
+  createdBy User          @relation(fields: [createdById], references: [id])
+  scenarios TestScenario[]
+  cases     TestCase[]
+  reports   ExecutionReport[]
+}
+
+model TestScenario {
+  id             String   @id @default(uuid())
+  projectId      String
+  phaseId        String
+  testPlanId     String
+  title          String
+  objective      String?
+  preconditions  String?
+  steps          String?
+  expectedResult String?
+  createdById    String
+  createdAt      DateTime @default(now())
+
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  phase     Phase    @relation(fields: [phaseId], references: [id], onDelete: Cascade)
+  testPlan  TestPlan @relation(fields: [testPlanId], references: [id], onDelete: Cascade)
+  createdBy User     @relation(fields: [createdById], references: [id])
+  testCases TestCase[]
+}
+
+model TestCase {
+  id             String   @id @default(uuid())
+  projectId      String
+  phaseId        String
+  testPlanId     String
+  testScenarioId String?
+  title          String
+  priority       String   @default("medium")
+  testType       String   @default("functional")
+  preconditions  String?
+  steps          String?
+  expectedResult String?
+  actualResult   String?
+  status         String   @default("not_started")
+  createdById    String
+  createdAt      DateTime @default(now())
+
+  project      Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  phase        Phase         @relation(fields: [phaseId], references: [id], onDelete: Cascade)
+  testPlan     TestPlan      @relation(fields: [testPlanId], references: [id], onDelete: Cascade)
+  testScenario TestScenario? @relation(fields: [testScenarioId], references: [id], onDelete: SetNull)
+  createdBy    User          @relation(fields: [createdById], references: [id])
+  bugs         BugReport[]
+}
+
+model BugReport {
+  id               String   @id @default(uuid())
+  projectId        String
+  phaseId          String
+  testCaseId       String?
+  title            String
+  severity         String   @default("major")
+  priority         String   @default("medium")
+  description      String?
+  stepsToReproduce String?
+  actualResult     String?
+  expectedResult   String?
+  status           String   @default("new")
+  detectedById     String
+  createdAt        DateTime @default(now())
+
+  project     Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  phase       Phase      @relation(fields: [phaseId], references: [id], onDelete: Cascade)
+  testCase    TestCase?  @relation(fields: [testCaseId], references: [id], onDelete: SetNull)
+  detectedBy  User       @relation(fields: [detectedById], references: [id])
+  attachments BugFile[]
+}
+
+model BugFile {
+  id          String   @id @default(uuid())
+  fileName    String
+  fileUrl     String
+  mimeType    String
+  bugId       String
+  uploadedById String
+  createdAt   DateTime @default(now())
+
+  bug       BugReport @relation(fields: [bugId], references: [id], onDelete: Cascade)
+  uploadedBy User     @relation(fields: [uploadedById], references: [id])
+}
+
+model ExecutionReport {
+  id            String   @id @default(uuid())
+  projectId     String
+  phaseId       String
+  testPlanId    String
+  executedById  String
+  executionDate DateTime
+  summary       String?
+  totalCases    Int      @default(0)
+  passed        Int      @default(0)
+  failed        Int      @default(0)
+  blocked       Int      @default(0)
+  resultStatus  String   @default("in_progress")
+  createdAt     DateTime @default(now())
+
+  project    Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  phase      Phase    @relation(fields: [phaseId], references: [id], onDelete: Cascade)
+  testPlan   TestPlan @relation(fields: [testPlanId], references: [id], onDelete: Cascade)
+  executedBy User     @relation(fields: [executedById], references: [id])
+}
